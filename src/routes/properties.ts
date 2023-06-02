@@ -4,11 +4,22 @@ import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { knex } from '../database'
 import multipart from '@fastify/multipart'
-import { PropertyType, TransactionType } from '../@types/properties'
+import { type PropertiesDTO, PropertyType, TransactionType, type Properties } from '../@types/properties'
 import fs from 'node:fs'
 import path from 'path'
+import { type PropertiesImagesDTO, type PropertiesImages } from '../@types/properties-images'
 
 // import { } from '../@types/properties-images'
+
+function isEmpty (obj: Record<string, unknown>): boolean {
+  for (const prop in obj) {
+    if (Object.hasOwn(obj, prop)) {
+      return false
+    }
+  }
+
+  return true
+}
 
 interface Body {
   // [k in keyof Properties]: {
@@ -48,9 +59,49 @@ interface Image {
 
 export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
   app.get('/', async (_, reply) => {
-    const properties = await reply.status(201).send(await knex('properties').select('*'))
+    // const properties = await knex('properties').select('*')
+    const leftJoin: Array<PropertiesDTO & Omit<PropertiesImagesDTO, 'id'> & { imageId: string }> = await knex
+      .select(['p.*', 'pi.*', 'pi.id as imageId', 'p.id'])
+      .from('properties as p')
+      .leftJoin('properties-images as pi', 'p.id', 'pi.property_id')
+    const groupedData: Record<string, Properties & { images: PropertiesImages[] }> = {} // Array<>
+    console.log(leftJoin)
+    leftJoin.forEach(({ property_id, url, created_at, ...item }) => { //
+      const { id, imageId, propertyId, ...property } = item
+      const image: PropertiesImages = { url: '' }
 
-    return await reply.status(200).send({ properties })
+      if (isEmpty({ ...groupedData[id] })) {
+        const { city, street, district, postalCode, area, baths, garages, rooms, ...nonNestedValues } = property
+        groupedData[id] = {
+          ...nonNestedValues,
+          address: {
+            city, street, district, postalCode
+          },
+          details: {
+            area, baths, garages, rooms
+          },
+          images: []
+        }
+      }
+
+      if ((item.url != null) && item.url.length > 0) {
+        image.url = item.url
+        groupedData[id].images.push(image)
+      }
+    })
+    // console.log(Object.values(groupedData))
+
+    // console.log(groupedData['db8147e4-b7d5-49b1-93c5-ae2dfcd7a429'])
+
+    // const data = await Promise.all(properties.map(async (property) => {
+    //   const images = await knex('properties-images').where('property_id', property.id)
+    //   return ({
+    //     ...property,
+    //     images
+    //   })
+    // }))
+    // console.log(data)
+    return await reply.status(200).send(Object.values(groupedData))
   })
 
   app.get('/:id', async (request, reply) => {
@@ -72,9 +123,7 @@ export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
       // const safeNumberSchema = z.string().regex(/^\d+$/).transform(Number)
 
       const _files = await request.saveRequestFiles()
-      // console.log(_files)
       const _fields = _files[0].fields
-      // console.log(files)
       const fields: Partial<Omit<Body, 'images'>> = {}
 
       for (const key in _fields) {
@@ -149,10 +198,7 @@ export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
         street
       })
 
-      if (_files.findIndex(file => {
-        console.log(file.mimetype)
-        return file.mimetype.startsWith('image/')
-      }) !== -1) {
+      if (_files.findIndex(file => file.mimetype.startsWith('image/')) === -1) {
         return await reply.status(415).send({ error: 'Formato de arquivo inválido, não é uma imagem!' })
       }
 

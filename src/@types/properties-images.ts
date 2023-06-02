@@ -4,5 +4,5 @@ export interface PropertiesImages {
 
 export interface PropertiesImagesDTO extends PropertiesImages {
   id: string
-  property_id: string
+  propertyId: string
 }

@@ -55,7 +55,9 @@ it('should be able to create a property', async () => {
   }
   void request
     .attach('images', 'teste2.jpg')
-    .attach('images', 'teste.txt')
+    .attach('images', 'teste2.jpg')
+    .attach('images', 'teste2.jpg')
+    .attach('images', 'teste2.jpg')
   const response = await request
   console.log(`----------(${response.statusCode})----------`)
   console.log(response.body)
