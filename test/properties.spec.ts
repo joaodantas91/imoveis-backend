@@ -1,28 +1,19 @@
-import { beforeAll, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, expect, it } from 'vitest'
 import supertestRequest from 'supertest'
 import { app } from '../src/app'
 import { type Properties } from '../src/@types/properties'
+import { execSync } from 'node:child_process'
 
 beforeAll(async () => {
   await app.ready()
 })
 
+beforeEach(() => {
+  execSync('npm run knex migrate:rollback --all')
+  execSync('npm run knex migrate:latest')
+})
+
 it('should be able to create a property', async () => {
-  // interface FormData {
-  //   title: string
-  //   transactionType: string
-  //   type: string
-  //   price: number
-  //   description: string
-  //   rooms: number
-  //   baths: number
-  //   garages: number
-  //   area: number
-  //   street: string
-  //   district: string
-  //   city: string
-  //   postalCode: string
-  // }
   const formData: Properties = {
     title: 'teste casa',
     transactionType: 'sale',
@@ -43,7 +34,6 @@ it('should be able to create a property', async () => {
     }
   }
 
-  // console.log((await request).body)
   const request = supertestRequest(app.server)
     .post('/properties')
 
@@ -65,7 +55,7 @@ it('should be able to create a property', async () => {
   expect(response.statusCode).toEqual(201)
 })
 
-// it('should be able to get all property', async () => {
-//   const request = await supertestRequest(app.server).get('/properties')
-//   expect(request.statusCode).toEqual(201)
-// })
+it('should be able to get all property', async () => {
+  const request = await supertestRequest(app.server).get('/properties')
+  expect(request.statusCode).toEqual(201)
+})
