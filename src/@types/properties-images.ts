@@ -1,8 +1,9 @@
 export interface PropertiesImages {
   url: string
+  order: number
+  id: string
 }
 
 export interface PropertiesImagesDTO extends PropertiesImages {
-  id: string
   propertyId: string
 }

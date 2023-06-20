@@ -30,7 +30,7 @@ export interface Properties {
   }
 }
 
-export interface PropertiesDTO extends Properties {
+export interface PropertiesDTO {
   id: string
   transactionType: TransactionType
   type: PropertyType
