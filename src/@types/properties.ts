@@ -13,7 +13,7 @@ export enum PropertyType {
 export interface Properties {
   transactionType: `${TransactionType}`
   type: `${PropertyType}`
-  price: number | undefined
+  price: `${number}`
   title: string
   description: string
   address: {
@@ -23,12 +23,15 @@ export interface Properties {
     district: string
   }
   details: {
-    rooms: number | undefined
-    baths: number | undefined
-    garages: number | undefined
-    area: number | undefined
+    rooms: `${number}`
+    baths: `${number}`
+    garages: `${number}`
+    area: `${number}`
   }
 }
+// @ts-expect-error da erro iso awui
+// eslint-disable-next-line
+export interface DatabasePropertiesReturnType extends Omit<Properties, 'address' | 'details'>, Properties['address'], Properties['details'] { }
 
 export interface PropertiesDTO {
   id: string

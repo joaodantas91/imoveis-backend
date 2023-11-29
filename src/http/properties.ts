@@ -4,10 +4,12 @@ import { z } from 'zod'
 import { knex } from '../database'
 import multipart, { type MultipartFields } from '@fastify/multipart'
 import { type PropertiesDTO, PropertyType, TransactionType, type Properties } from '../@types/properties'
-import fs from 'node:fs'
+import fs from 'fs'
 import path from 'path'
 import { type PropertiesImagesDTO, type PropertiesImages } from '../@types/properties-images'
 import { env } from '../env'
+import { flattenObject } from '../utils/flattenObject'
+import { fileURLToPath } from 'url'
 // import util from 'node:util'
 // import { pipeline } from 'node:stream'
 
@@ -26,9 +28,9 @@ function isEmpty (obj: Record<string, unknown>): boolean {
 
 function getFileURL (filename: string): string {
   if (env.NODE_ENV === 'test') {
-    return new URL(`../../db/images-test/${filename}`, import.meta.url).pathname
+    return path.resolve(__dirname, `../../db/images-test/${filename}`)
   }
-  return new URL(`../../db/images/${filename}`, import.meta.url).pathname
+  return path.resolve(__dirname, `../../db/images/${filename}`)
 }
 
 interface Body {
@@ -108,17 +110,17 @@ const addressSchema = z.object({
 })
 
 const detailsSchema = z.object({
-  rooms: z.number().optional(),
-  baths: z.number().optional(),
-  garages: z.number().optional(),
-  area: z.number().optional()
+  rooms: z.coerce.number(z.number().optional()),
+  baths: z.coerce.number(z.number().optional()),
+  garages: z.coerce.number(z.number().optional()),
+  area: z.coerce.number(z.number().optional())
 })
 
 const PropertyBodySchema = z.object({
   title: z.string(),
   transactionType: z.nativeEnum(TransactionType),
   type: z.nativeEnum(PropertyType),
-  price: z.number().optional(),
+  price: z.coerce.number(z.number().optional()),
   description: z.string(),
   address: addressSchema,
   details: detailsSchema
@@ -267,10 +269,10 @@ export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
 
     fastify.post('/', async (request, reply) => {
       // const safeNumberSchema = z.string().regex(/^\d+$/).transform(Number)
-
-      const _files = await request.saveRequestFiles()
+      const _files = await request.saveRequestFiles({ tmpdir: path.resolve(__dirname, '../../db/temp') })
 
       const fields = handleMultipartFields(_files[0].fields)
+      console.log(fields)
       const parsedData = PropertyBodySchema.safeParse(fields)
 
       if (!parsedData.success) {
@@ -278,36 +280,10 @@ export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
         return await reply.status(400).send({ error: parsedData.error.format() })
       }
 
-      const {
-        title,
-        transactionType,
-        type,
-        price,
-        description,
-        details: {
-          rooms, baths, garages, area
-        },
-        address: {
-          city, district, postalCode, street
-        }
-      } = parsedData.data
-
       const propertyId = randomUUID()
       await knex('properties').insert({
         id: propertyId,
-        title,
-        transactionType,
-        type,
-        price,
-        description,
-        rooms,
-        baths,
-        garages,
-        area,
-        city,
-        district,
-        postalCode,
-        street
+        ...flattenObject(parsedData.data)
       })
 
       if (_files.findIndex(file => file.mimetype.startsWith('image/')) === -1) {
@@ -318,7 +294,7 @@ export async function propertiesRoutes (app: FastifyInstance): Promise<void> {
         const filename = randomUUID()
         const destinationFilePath = getFileURL(filename + path.extname(image.filename))
         void (async () => {
-          fs.copyFile(image.filepath, destinationFilePath, (err) => {
+          fs.copyFile(path.win32.resolve(image.filepath), destinationFilePath, (err) => {
             if (err != null) throw err
           })
         })()
