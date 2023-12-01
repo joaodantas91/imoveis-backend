@@ -1,15 +1,9 @@
 import fastify from 'fastify'
 import { knex } from './database'
 import crypto from 'node:crypto'
-
-import { propertiesRoutes } from './http/properties'
 import { appRoutes } from './http/routes'
 
-export const app = fastify({ logger: true })
-
-void app.register(propertiesRoutes, {
-  prefix: 'properties'
-})
+export const app = fastify() // { logger: true }
 
 void app.register(appRoutes)
 

@@ -1,11 +1,8 @@
 import { type FastifyInstance } from 'fastify'
-import { editProperty } from './controllers/editProperty'
-import multipart from '@fastify/multipart'
+import { propertiesRoutes } from './propertiesRoutes'
 
 export async function appRoutes (app: FastifyInstance): Promise<void> {
-  void app.register(function (fastify, options, next) {
-    void fastify.register(multipart)
-    fastify.patch('/properties/:id', editProperty)
-    next()
+  void app.register(propertiesRoutes, {
+    prefix: 'properties'
   })
 }

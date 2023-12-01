@@ -67,7 +67,6 @@ function getFileURL (filename: string): string {
 const pump = util.promisify(pipeline)
 
 export async function editProperty (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<FastifyReply> {
-  console.log('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
   const data = await knex('properties').select('id').where('id', request.params.id).first()
 
   if (data == null) {
